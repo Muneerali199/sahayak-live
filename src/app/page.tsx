@@ -157,7 +157,7 @@ export default function LandingPage() {
       }
     },
     {
-      name: "Mohammad Ehsan",
+      name: "Ashwini jaiswal",
       role: "Backend Developer",
       icon: <Cpu className="w-8 h-8" />,
       social: {
@@ -167,7 +167,7 @@ export default function LandingPage() {
       }
     },
     {
-      name: "Stuti Gupta",
+      name: "prachi ",
       role: "AI Specialist",
       icon: <BrainCircuit className="w-8 h-8" />,
       social: {
