@@ -209,7 +209,7 @@ export default function LandingPage() {
 
   const teamMembers = [
     {
-      name: "Muneer Ali",
+      name: "Stuti mishra",
       role: "Full Stack Developer",
       icon: <Code2 className="w-8 h-8" />,
       gradient: "from-blue-500 to-purple-500",
@@ -220,7 +220,7 @@ export default function LandingPage() {
       }
     },
     {
-      name: "Ashwini Jaiswal",
+      name: "Amitesh",
       role: "Backend Developer",
       icon: <Cpu className="w-8 h-8" />,
       gradient: "from-emerald-500 to-teal-500",
@@ -231,7 +231,7 @@ export default function LandingPage() {
       }
     },
     {
-      name: "Prachi",
+      name: "Amardeep",
       role: "AI Specialist",
       icon: <BrainCircuit className="w-8 h-8" />,
       gradient: "from-pink-500 to-orange-500",
@@ -240,7 +240,41 @@ export default function LandingPage() {
         linkedin: "https://linkedin.com/in/stuti-gupta-256839293/",
         twitter: "https://twitter.com"
       }
-    }
+    },
+    {
+      name: "kapil",
+      role: "ui ux designer",
+      icon: <BrainCircuit className="w-8 h-8" />,
+      gradient: "from-pink-500 to-orange-500",
+      social: {
+        github: "https://github.com/Stutyay",
+        linkedin: "https://linkedin.com/in/stuti-gupta-256839293/",
+        twitter: "https://twitter.com"
+      }
+    },
+     {
+      name: "Ayush",
+      role: "deploy manager",
+      icon: <BrainCircuit className="w-8 h-8" />,
+      gradient: "from-pink-500 to-orange-500",
+      social: {
+        github: "https://github.com/Stutyay",
+        linkedin: "https://linkedin.com/in/stuti-gupta-256839293/",
+        twitter: "https://twitter.com"
+      }
+     },
+     {
+      name: "Pratyush",
+      role: "QA tester",
+      icon: <BrainCircuit className="w-8 h-8" />,
+      gradient: "from-pink-500 to-orange-500",
+      social: {
+        github: "https://github.com/Stutyay",
+        linkedin: "https://linkedin.com/in/stuti-gupta-256839293/",
+        twitter: "https://twitter.com"
+      }
+     }
+  
   ];
 
   const testimonials = [
