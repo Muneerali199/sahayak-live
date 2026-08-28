@@ -29,6 +29,8 @@ import {
 import { Logo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 
+import { motion } from "framer-motion";
+import { Radio } from "lucide-react";
 import LocalizedContent from "@/components/features/localized-content";
 import DifferentiatedMaterials from "@/components/features/differentiated-materials";
 import KnowledgeBase from "@/components/features/knowledge-base";
@@ -190,6 +192,34 @@ function Dashboard() {
                 <Button variant="outline" onClick={handleSignOut}>Logout</Button>
               </div>
             </header>
+
+            {/* Go Live CTA Banner */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-[1px]"
+            >
+              <div className="rounded-2xl bg-background p-5 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+                    <Radio className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">Sahayak Live — AI Co-Teacher</h2>
+                    <p className="text-sm text-muted-foreground">Start a live classroom with a multi-agent voice AI that helps students in real-time</p>
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shrink-0"
+                  onClick={() => router.push("/classroom")}
+                >
+                  <Radio className="w-4 h-4 mr-2" />
+                  Go Live
+                </Button>
+              </div>
+            </motion.div>
+
             <main className="flex-1">{renderFeature()}</main>
           </SidebarInset>
         </div>
