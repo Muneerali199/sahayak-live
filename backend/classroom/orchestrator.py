@@ -17,6 +17,7 @@ from agents.code_switch import run_code_switch
 from agents.gap_radar import run_gap_radar
 from agents.differentiation import run_differentiation
 from agents.explainer import run_explainer
+from agents.replier import run_replier
 from agents.quizmaster import generate_quiz_question, evaluate_quiz_answer
 from agents.insights import run_insights
 
@@ -90,7 +91,16 @@ async def floormanager_node(state: dict) -> dict:
 
 async def router_node(state: dict) -> dict:
     """Decide what action the AI should take (if any)."""
-    if not state.get("ai_permitted", False):
+    ai_muted = state.get("ai_muted", False)
+
+    # A direct student question is answered promptly (the student just ceded the floor),
+    # provided the AI isn't muted — this lets the AI reply to "hello"/questions.
+    last = state.get("last_utterance", {})
+    last_text = last.get("text", "").lower().strip()
+    last_role = last.get("role", "")
+    direct_query = (not ai_muted and last_role == "student" and _is_direct_query(last_text))
+
+    if not (state.get("ai_permitted", False) or direct_query):
         state["pending_action"] = None
         return state
 
@@ -166,8 +176,31 @@ async def router_node(state: dict) -> dict:
                     }
                     return state
 
+    # Priority 5: Direct conversational reply to a student query
+    if direct_query:
+        spoken = await run_replier(state)
+        if spoken:
+            state["pending_action"] = {
+                "type": "EXPLAIN",
+                "content": spoken,
+                "concept": "direct reply",
+            }
+            return state
+
     state["pending_action"] = None
     return state
+
+
+def _is_direct_query(text: str) -> bool:
+    """Heuristic: does this utterance look like a direct question or greeting
+    aimed at the AI, rather than normal class narration?"""
+    markers = (
+        "sahayak", "hey", "hello", "hi ", "?" ,
+        "explain", "help", "what is", "what's", "how do", "can you",
+        "i don't understand", "i dont understand", "i do not understand", "don't get", "dont get",
+        "confused", "please", "anyone", "teacher?",
+    )
+    return any(m in text for m in markers)
 
 
 async def action_node(state: dict) -> dict:

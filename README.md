@@ -22,7 +22,7 @@ The same AI is simultaneously a class co-teacher (broadcasts to everyone) **and*
 
 ---
 
-## 🧠 The 8 Agents
+## 🧠 The 9 Agents
 
 | Agent | Job |
 |---|---|
@@ -31,11 +31,12 @@ The same AI is simultaneously a class co-teacher (broadcasts to everyone) **and*
 | **Gap Radar** ⭐ | Clusters student confusion by concept, fires common-gap alerts |
 | **Differentiation Engine** | Per-student comprehension profiling (beginner/intermediate/advanced) |
 | **Explainer** | Generates calibrated explanations at 3 difficulty levels |
+| **Replier** | Answers direct student questions & greetings conversationally when the floor is open |
 | **Quizmaster** | Spoken quizzes — asks out loud, names a student, listens, evaluates |
 | **Code-Switch** | Detects Hinglish/Tamil-English mixing, makes AI reply in matching language |
 | **Insights** | Post-class: per-student gaps, common gaps, who needs support, next steps |
 
-**Orchestrator:** LangGraph `StateGraph` — Ingest → Lesson Context → Code-Switch → Gap Radar → Differentiation → Floor Manager → Router → Action
+**Orchestrator:** LangGraph `StateGraph` — Ingest → Lesson Context → Code-Switch → Gap Radar → Differentiation → Floor Manager → Router (Quiz → Whisper → Reply) → Action
 
 ---
 
@@ -163,6 +164,7 @@ sahayak-live/
         ├── gap_radar.py           # ⭐ confusion clustering
         ├── differentiation.py     # per-student levels
         ├── explainer.py           # 3-level explanations
+        ├── replier.py             # direct Q&A / greeting replies
         ├── quizmaster.py          # spoken quizzes
         ├── code_switch.py         # multilingual detection
         └── insights.py            # post-class summary
@@ -194,6 +196,16 @@ sahayak-live/
 | Student identification | Firebase Auth + room identity + per-student profiles |
 | Post-class summaries | **Insights** agent + summary page |
 | Teacher control / override | Mute toggle, End Class, quiz controls |
+
+## 🚀 Market & Business Model
+
+The combination of **live voice + floor management + private whispering + confusion clustering is genuinely novel** — no production product, funded startup, or published prototype ships it together (Khanmigo, MagicSchool, Century Tech and Robyn are the closest, and none do all four).
+
+- **Market:** AI-in-education is $6.9B → $41B by 2030 (41% CAGR); India K-12 EdTech $6.5B → $29B (~28% CAGR).
+- **Model:** Per-classroom SaaS at ₹15,000–60,000/yr (India) / $360–1,200/yr (US), 85–95% gross margin (inference via Groq is near-free).
+- **Moats:** voice-first physical presence, a proprietary dataset of Indian classroom interactions, hardware lock-in, and Hindi/Tamil/Telugu/Marathi/Bengali voice coverage no competitor serves.
+
+Full research + pricing + go-to-market: **[docs/business-model.md](docs/business-model.md)**
 
 ## 📄 License
 

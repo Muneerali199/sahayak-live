@@ -115,11 +115,20 @@ async def call_mistral(prompt: str, system: str = "") -> str:
 
 async def call_llm(prompt: str, system: str = "", model: str = "gemini") -> str:
     provider = resolve_provider(model)
-    if provider == "groq":
-        return await call_groq(prompt, system)
-    if provider == "mistral":
-        return await call_mistral(prompt, system)
-    return await call_gemini(prompt, system)
+    try:
+        if provider == "groq":
+            return await call_groq(prompt, system)
+        if provider == "mistral":
+            return await call_mistral(prompt, system)
+        return await call_gemini(prompt, system)
+    except Exception as e:
+        if provider != "groq" and GROQ_API_KEY:
+            try:
+                logger.warning("Primary provider %s failed (%s), falling back to Groq", provider, e)
+                return await call_groq(prompt, system)
+            except Exception as e2:
+                logger.warning("Groq fallback failed: %s", e2)
+        raise
 
 
 def resolve_provider(model: str) -> str:

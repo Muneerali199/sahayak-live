@@ -19,11 +19,18 @@ if (typeof window !== "undefined" && "speechSynthesis" in window) {
   synthesis.onvoiceschanged = loadVoices;
 }
 
-export function speak(text: string, lang: string = "en-US") {
+export function speak(text: string, lang: string = "en-IN") {
   if (!synthesis || !text) return;
   synthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = currentVoice;
+  // Prefer an Indian English voice (matches our Indian classroom), otherwise
+  // any English voice, otherwise the system default.
+  const voices = synthesis.getVoices();
+  utterance.voice =
+    voices.find((v) => v.lang.startsWith("en-IN")) ||
+    voices.find((v) => v.lang.startsWith("en")) ||
+    voices[0] ||
+    null;
   utterance.rate = 0.95;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
