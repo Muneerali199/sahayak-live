@@ -6,8 +6,11 @@ WebSocket room manager + multi-agent orchestrator for live classroom.
 import sys
 import os
 import json
-import logging
+import io
 import uuid
+import logging
+import subprocess
+import tempfile
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -17,11 +20,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from room import registry, Room, Participant
 from orchestrator import process_utterance, generate_insights
-from llm_client import GROQ_API_KEY, MISTRAL_API_KEY
+from llm_client import GROQ_API_KEY, MISTRAL_API_KEY, ollama_healthy
+from tts import synthesize as tts_synthesize, _piper_available as piper_available
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -70,6 +75,32 @@ def get_room_state(room_id: str) -> dict:
     return room_states[room_id]
 
 
+# ─── Local TTS (neural Piper, falls back to macOS `say`) ──────────
+
+TTS_VOICE = os.getenv("TTS_VOICE", "Rishi")  # fallback macOS voice
+
+
+@app.get("/api/tts")
+async def synthesize_speech(text: str, lang: str = "en-IN"):
+    """Generate human-like speech audio via local neural TTS. Returns a WAV file."""
+    if not text:
+        return {"error": "No text provided"}, 400
+
+    try:
+        audio, media_type = tts_synthesize(text)
+        return Response(
+            content=audio,
+            media_type=media_type,
+            headers={
+                "X-TTS-Engine": "piper" if piper_available() else "say",
+                "X-TTS-Text-Length": str(len(text)),
+            },
+        )
+    except Exception as e:
+        logger.error("TTS error: %s", e)
+        return {"error": f"TTS failed: {e}"}, 500
+
+
 # ─── REST Endpoints ────────────────────────────────────────────────
 
 @app.get("/api/health")
@@ -79,6 +110,7 @@ async def health():
         "service": "Sahayak Live — Multi-Agent Co-Teacher",
         "groq_configured": bool(GROQ_API_KEY),
         "mistral_configured": bool(MISTRAL_API_KEY),
+        "local_ollama": ollama_healthy(),
         "active_rooms": len(registry.rooms),
     }
 

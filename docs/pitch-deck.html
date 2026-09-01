@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sahayak Live — The AI Co-Teacher That Lives in the Classroom</title>
+<style>
+  :root{
+    --bg:#0a0e1a; --bg2:#0e1530; --card:#121a33;
+    --ink:#eef2ff; --muted:#9aa7c7; --accent:#6d5cff; --accent2:#00d4ff;
+    --gold:#ffc24b; --green:#34d399; --red:#fb7185;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 800px at 80% -10%, #16214a 0%, var(--bg) 55%);
+    color:var(--ink); overflow:hidden;
+  }
+  .deck{display:flex;width:700%;height:100vh;transition:transform .6s cubic-bezier(.7,0,.2,1)}
+  .slide{width:14.2857%;height:100vh;padding:4.5vh 6vw;display:flex;flex-direction:column;position:relative}
+  .mermaid{display:flex;justify-content:center;margin-top:2vh}
+  .stack{display:grid;grid-template-columns:repeat(4,1fr);gap:.9vw;margin-top:2vh}
+  .stack .layer{background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:1vw}
+  .stack .ly{font-size:.72vw;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);font-weight:700}
+  .stack .it{font-size:.78vw;color:#dfe6ff;margin-top:.7vh;line-height:1.5}
+  .kicker{font-size:.72vw;letter-spacing:.28em;text-transform:uppercase;color:var(--accent2);font-weight:700;margin-bottom:1.2vh}
+  .h1{font-size:2.7vw;line-height:1.12;font-weight:800;letter-spacing:-.02em}
+  .h2{font-size:1.9vw;line-height:1.15;font-weight:800;letter-spacing:-.01em;margin-bottom:3vh}
+  .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);font-size:1.05vw;line-height:1.6;margin-top:1.4vh;max-width:52vw}
+  .pill{display:inline-flex;align-items:center;font-size:.72vw;font-weight:700;letter-spacing:.04em;padding:.55vh 1.1vw;border-radius:999px;border:1px solid rgba(109,92,255,.4);background:rgba(109,92,255,.12);color:var(--accent2);margin:0 .4vw .6vh 0}
+  .grid{display:grid;gap:1.4vw;margin-top:3vh}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:1.6vw 1.4vw;position:relative;overflow:hidden}
+  .card .n{font-size:.7vw;font-weight:800;color:var(--accent2)}
+  .card .t{font-weight:800;font-size:1.12vw;margin:.6vh 0 .8vh}
+  .card .d{color:var(--muted);font-size:.85vw;line-height:1.5}
+  .stat{font-size:2.3vw;font-weight:800;line-height:1}
+  .big{font-size:3vw;font-weight:800}
+  .num{color:var(--gold)}
+  .bar{height:.5vh;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;margin-top:1.2vh;transition:width 1s ease}
+  .footer{position:absolute;bottom:3vh;left:6vw;right:6vw;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:.78vw}
+  .dots{display:flex;gap:.5vw}
+  .dots span{width:.62vw;height:.62vw;border-radius:50%;background:#2a3560;cursor:pointer;transition:.3s}
+  .dots span.on{background:linear-gradient(90deg,var(--accent),var(--accent2));width:1.6vw;border-radius:99px}
+  .navbtn{background:rgba(109,92,255,.15);border:1px solid rgba(109,92,255,.4);color:#fff;border-radius:10px;padding:.5vh 1vw;font-size:.85vw;cursor:pointer;font-weight:600}
+  .navbtn:hover{background:rgba(109,92,255,.3)}
+  .tags{margin-top:2vh}
+  .lead{font-size:1.5vw;font-weight:700;color:#fff;line-height:1.35;margin-top:1vh}
+  .vs table{width:100%;border-collapse:collapse;font-size:.85vw}
+  .vs td,.vs th{padding:1vh 1vw;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+  .vs th{color:var(--accent2);font-weight:700;font-size:.78vw;letter-spacing:.06em;text-transform:uppercase}
+  .ok{color:var(--green)} .no{color:var(--red)} .part{color:var(--gold)}
+  .etc{color:var(--muted);font-size:.82vw} .strong{color:#fff;font-weight:700}
+  .muted{color:var(--muted)} .small{font-size:.85vw}
+  .center{align-items:center;justify-content:center;text-align:center}
+  .slide .centerBox{max-width:56vw}
+  .logos span{opacity:.55;font-weight:700;margin:0 1vw;font-size:1vw}
+  .footerBtm{margin-top:auto}
+  ul.clean{list-style:none;margin-top:2vh}
+  ul.clean li{display:flex;gap:.8vw;margin:.9vh 0;font-size:1.02vw;color:#dfe6ff}
+  ul.clean li b{color:#fff}
+  .chk{color:var(--green);font-weight:800;flex:0 0 auto}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1 TITLE -->
+  <section class="slide">
+    <div class="kicker">PS31 · International Hackathon 2026</div>
+    <div class="h1" style="font-size:3.5vw">Sahayak&nbsp;Live<br><span class="accent">The AI Co-Teacher That Lives in the Classroom</span></div>
+    <div class="sub" style="font-size:1.25vw">A voice-first AI entity that sits beside the teacher in a <b style="color:#fff">live physical classroom</b> — managing turn-taking, whispering private help to struggling students, and surfacing real-time confusion so no child is left behind.</div>
+    <div class="tags">
+      <span class="pill">🗣 Voice-First</span><span class="pill">🏫 In-Room Co-Teacher</span><span class="pill">🔉 Private Whispers</span><span class="pill">📊 Live Insights</span><span class="pill">🌍 India Global South</span>
+    </div>
+    <div class="footer"><span>Problem → Solution → Why-Now → USP → Architecture → Business → Ask</span><span>Sahayak&nbsp;·&nbsp;Sanskrit: "Helper"</span></div>
+  </section>
+
+  <!-- SLIDE 2 PROBLEM -->
+  <section class="slide">
+    <div class="kicker">01 · Problem</div>
+    <div class="h2">A teacher can only be in one place at a time</div>
+    <div class="lead">In a class of 30–60, a teacher cannot answer every raised hand, spot every confused face, or give each child personal attention — <span class="accent">while still teaching everyone.</span></div>
+    <div class="grid g4">
+      <div class="card"><div class="n">60%+</div><div class="t">Children fear asking</div><div class="d">Most students won't raise a hand — shame of "being slow" silences the ones who need help most.</div></div>
+      <div class="card"><div class="n">&lt;1 min</div><div class="t">of 1:1 attention</div><div class="d">Per student per class. Individual help is the rarest — and most valuable — resource in education.</div></div>
+      <div class="card"><div class="n">~30%</div><div class="t">confused &amp; hidden</div><div class="d">A third of a class trails silently; the teacher only learns this at the next exam — when it's too late.</div></div>
+      <div class="card"><div class="n">0</div><div class="t">tools fill this gap</div><div class="d">EdTech tutors the screen, not the room. China's model stops at after-school tutoring; the live classroom is empty.</div></div>
+    </div>
+    <div class="footer"><span class="strong">The pain isn't content. It's live, in-the-moment attention — at class scale.</span></div>
+  </section>
+
+  <!-- SLIDE 3 SOLUTION -->
+  <section class="slide">
+    <div class="kicker">02 · Solution</div>
+    <div class="h2">A third presence in the room — the <span class="accent">Co-Teacher</span></div>
+    <div class="grid g2">
+      <div class="card"><div class="t">🗣 Real-time voice, in the lesson</div><div class="d">Browser mic → live transcript → multi-agent AI. When a child asks a question, Sahayak answers out loud — in the teacher's flow, never interrupting their moment.</div></div>
+      <div class="card"><div class="t">🔉 Private whisper to one child</div><div class="d">"Priya, don't worry — when adding halves and quarters, find a common denominator." Whispered only to her. Zero embarrassment, instant clarity.</div></div>
+      <div class="card"><div class="t">🧠 Live confusion radar</div><div class="d">"12 of 30 students are confused about common denominators — right now." Sahayak clusters the same question across students and tells the teacher mid-lesson.</div></div>
+      <div class="card"><div class="t">🌀 Floor manager</div><div class="d">An AI that knows when to speak and when to stay quiet — respecting turn-taking so it amplifies the teacher instead of competing with them.</div></div>
+    </div>
+    <div class="grid g3" style="margin-top:1.2vw">
+      <div class="card"><div class="t">9 agents working together</div><div class="d small">Lesson Context · Replier · Quiz · Whisper · Confusion Clustering · Insights · Floor Manager · TTS · Orchestrator</div></div>
+      <div class="card"><div class="t">Teacher stays in control</div><div class="d small">Mute anytime. AI never replaces the teacher — it holds the second mic.</div></div>
+      <div class="card"><div class="t">Zero-device classroom</div><div class="d small">Runs on the teacher's laptop + student phones/mics already in the room. No new hardware wall.</div></div>
+    </div>
+    <div class="footer"><span class="strong">Every student gets a personal tutor. The teacher gets superpowers.</span></div>
+  </section>
+
+  <!-- SLIDE 4 WHY NOW + CHINA REFERENCE -->
+  <section class="slide">
+    <div class="kicker">03 · Why Now · The China Lesson</div>
+    <div class="h2">China proved AI teaching works. <span class="accent">The classroom is the gap.</span></div>
+    <div class="grid g2">
+      <div class="card">
+        <div class="t">🇨🇳 What China has proven</div>
+        <ul class="clean">
+          <li><span class="chk">✓</span><span><b>Squirrel AI</b> — adaptive "knowledge-mastery" algorithm; 40M+ students, 2,000+ centers, Guinness World Record lesson.</span></li>
+          <li><span class="chk">✓</span><span><b>精准学 / vertical LLMs</b> — models tuned per subject (math, physics) with knowledge graphs.</span></li>
+          <li><span class="chk">✓</span><span><b>10M free accounts</b> to underserved families — AI education at national scale is viable.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="t">🚫 Where China stopped</div>
+        <ul class="clean">
+          <li><span class="chk" style="color:var(--red)">✗</span><span><b>After-school screen tutoring</b> — outside the classroom, outside lesson time.</span></li>
+          <li><span class="chk" style="color:var(--red)">✗</span><span><b>Replaces the student's screen time</b> — not the physical room.</span></li>
+          <li><span class="chk" style="color:var(--red)">✗</span><span><b>No live, voice co-teacher</b> managing a real class in real time.</span></li>
+        </ul>
+        <div style="margin-top:1.2vh;font-size:.9vw;color:var(--muted)">China has <b style="color:#fff">no in-room co-teacher</b> category — we are first to claim it.</div>
+      </div>
+    </div>
+    <div class="grid g3" style="margin-top:1.2vw">
+      <div class="card center"><div class="stat num">$41B</div><div class="t">AI-in-Education by 2030</div><div class="d small">41–43% CAGR (Global)</div></div>
+      <div class="card center"><div class="stat num">260M</div><div class="t">India K-12 students</div><div class="d small">1.5M schools · structural tailwind</div></div>
+      <div class="card center"><div class="stat num">NEP 2020</div><div class="t">mandates digital classrooms</div><div class="d small">Policy tailwind, not hype</div></div>
+    </div>
+    <div class="footer"><span class="strong">Proven abroad + empty at home + policy running toward us = the moment is now.</span></div>
+  </section>
+
+  <!-- SLIDE 5 USP + DIFFERENTIATION -->
+  <section class="slide">
+    <div class="kicker">04 · Unique Value Proposition</div>
+    <div class="h2">The first AI that <span class="accent">co-teaches a live class</span>, not a screen</div>
+    <div class="grid g2">
+      <div class="card"><div class="t">Our USP (one line)</div><div class="d" style="font-size:1.05vw;line-height:1.5"><b style="color:#fff">A voice AI that lives inside the physical classroom</b> — whispering to each child, answering aloud, and turning 30 silent confusions into one teacher alert. In real time — while always deferring to the human teacher at the front of the room.</div></div>
+      <div class="card"><div class="t">Borrowed from China &amp; sharpened</div><div class="d small">We take China's <b style="color:#fff">adaptive knowledge-mastery</b> and <b style="color:#fff">vertical model</b>, then deploy it where China never did — <b style="color:#fff">inside the live lesson</b>.</div></div>
+    </div>
+    <div class="grid" style="margin-top:1.2vw">
+      <table class="vs">
+        <tr><th>Capability</th><th>Khanmigo</th><th>MagicSchool</th><th>Squirrel AI (CN)</th><th>Robyn (UK)</th><th style="color:var(--accent2)">Sahayak Live</th></tr>
+        <tr><td class="strong">Live voice in class</td><td class="no">✗ text</td><td class="no">✗</td><td class="no">✗ screen</td><td class="ok">✓</td><td class="ok">✓✓</td></tr>
+        <tr><td class="strong">Floor / turn management</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="part">◐ reactive</td><td class="ok">✓✓</td></tr>
+        <tr><td class="strong">Private whisper to 1 student</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="ok">✓✓</td></tr>
+        <tr><td class="strong">Live confusion clustering</td><td class="no">✗</td><td class="no">✗</td><td class="part">◐ adaptive</td><td class="no">✗</td><td class="ok">✓✓</td></tr>
+        <tr><td class="strong">Co-teacher, never substitute</td><td class="no">✗ tutor</td><td class="no">✗ prep</td><td class="no">✗ tutor</td><td class="part">◐</td><td class="ok">✓✓</td></tr>
+      </table>
+    </div>
+    <div class="footer"><span class="strong">We are not the 11th tutor. We are the first co-teacher.</span></div>
+  </section>
+
+  <!-- SLIDE 6 TECHNICAL ARCHITECTURE + STACK -->
+  <section class="slide">
+    <div class="kicker">05 · Technical Architecture</div>
+    <div class="h2">From a raised hand to a spoken answer <span class="accent">in ~1 second</span></div>
+    <div class="mermaid">
+<pre class="mermaid">
+flowchart LR
+  subgraph CLIENT["Frontend (local devices)"]
+    A["Teacher / Student browser"]
+    B["Microphone / Speech (STT)"]
+    C["Speaker / &lt;audio&gt; TTS"]
+  end
+  subgraph BACK["FastAPI + WebSocket"]
+    D["Room State: transcript, floor, profiles"]
+  end
+  subgraph AGENTS["LangGraph Orchestrator"]
+    E["Router: Quiz, Whisper, Reply"]
+    F["Floor Manager"]
+    G["Lesson Context"]
+    H["Gap Radar"]
+    I["Quiz Master"]
+    J["Explainer"]
+    K["Replier"]
+    L["Differentiation"]
+    M["Insights"]
+  end
+  subgraph DL["Models"]
+    N["Groq / Mistral / Gemini / Ollama"]
+    O["Piper neural TTS"]
+    P["Whisper STT"]
+  end
+  A --> B --> D
+  D --> E
+  E --> F & G & H & I & J & K & L & M
+  G & H & I & J & K & L & M --> N
+  F --> D
+  E -->|"AI_SPEAK · WHISPER · QUIZ"| D
+  D -->|broadcast| C
+  C --> O
+  D --> P
+</pre>
+    </div>
+    <div class="stack">
+      <div class="layer"><div class="ly">Frontend</div><div class="it">Next.js · React ·<br>Web Speech (STT) ·<br>Framer Motion</div></div>
+      <div class="layer"><div class="ly">Realtime</div><div class="it">FastAPI · WebSocket<br>· ASGI · in-memory rooms</div></div>
+      <div class="layer"><div class="ly">Agent Layer</div><div class="it">LangGraph ·<br>9 agents · orchestrator<br>· floor manager</div></div>
+      <div class="layer"><div class="ly">Models</div><div class="it">Groq · Mistral · Gemini<br>· Ollama (offline) ·<br>Piper local neural TTS</div></div>
+    </div>
+    <div class="footer"><span class="strong">Offline-first, human voice, 9 working agents — the whole class runs on a laptop.</span></div>
+  </section>
+
+  <!-- SLIDE 7 BUSINESS MODEL + ASK -->
+  <section class="slide">
+    <div class="kicker">06 · Business Model · Ask</div>
+    <div class="h2">Revenue: <span class="accent">per-classroom SaaS</span> · Razor-and-blades</div>
+    <div class="grid g2">
+      <div class="card"><div class="t">How we make money</div>
+        <table class="vs" style="font-size:.8vw">
+          <tr><th>Plan</th><th>Price (₹)</th><th>Value</th></tr>
+          <tr><td class="strong">Teacher Basic</td><td>Free</td><td class="muted">1 subject · demo</td></tr>
+          <tr><td class="strong">Teacher Pro</td><td>₹299/mo</td><td class="muted">all subjects · analytics</td></tr>
+          <tr><td class="strong">School Standard</td><td>₹35,000/yr</td><td class="muted">15 classrooms · curriculum</td></tr>
+          <tr><td class="strong">School Premium</td><td>₹60K+ /yr</td><td class="muted">unlimited · API · CSM</td></tr>
+          <tr><td class="strong">Hardware bundle</td><td>+₹15K/yr</td><td class="muted">mic + speaker kit (lock-in)</td></tr>
+        </table>
+      </div>
+      <div class="card"><div class="t">Why it wins</div>
+        <ul class="clean">
+          <li><span class="chk">✓</span><span><b>85–95% gross margin</b> — inference &lt; $30/classroom/yr.</span></li>
+          <li><span class="chk">✓</span><span><b>Hardware = lock-in</b> (Robyn proves schools pay).</span></li>
+          <li><span class="chk">✓</span><span><b>Per-classroom &gt; per-student</b> — per-student failed in India (Byju's).</span></li>
+          <li><span class="chk">✓</span><span><b>10× cheaper</b> than Khanmigo district ($35) / ChatGPT Edu.</span></li>
+          <li><span class="chk">✓</span><span><b>Data flywheel</b> — India classroom-interaction dataset no one has.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:1.2vw">
+      <div class="card"><div class="t">TAM</div><div class="stat num" style="font-size:1.9vw">₹1,000+ Cr</div><div class="d small">50K–80K tech-forward private schools × ₹5K–15K/classroom/yr</div></div>
+      <div class="card" style="border-color:rgba(0,212,255,.5);background:linear-gradient(135deg,rgba(109,92,255,.18),rgba(0,212,255,.08))"><div class="t" style="color:var(--accent2)">The Ask</div><div class="d" style="font-size:1vw;line-height:1.5"><b style="color:#fff">We're building the demo now.</b> We ask for $50K to run a 20-school pilot, tune the vertical "Sahayak Math" model, and ship the Indian voice in Hindi + 8 more languages. <b style="color:#fff">The room is empty. We get there first.</b></div></div>
+    </div>
+    <div class="footer"><span>Draft insider · expect revenue 6–12 mo after pilot ✓</span></div>
+  </section>
+
+</div>
+
+<!-- Controls -->
+<div style="position:fixed;bottom:3vh;left:6vw;right:6vw;display:flex;justify-content:space-between;align-items:center;z-index:50">
+  <button class="navbtn" onclick="nav(-1)">◀ Prev</button>
+  <div class="dots" id="dots"></div>
+  <button class="navbtn" onclick="nav(1)">Next ▶</button>
+</div>
+
+<script>
+  const deck=document.getElementById('deck');
+  const slides=deck.children.length;
+  const dots=document.getElementById('dots');
+  let cur=0;
+  for(let i=0;i<slides;i++){const s=document.createElement('span');s.onclick=()=>go(i);dots.appendChild(s);}
+  function render(){deck.style.transform='translateX(-'+cur*14.2857+'%)';
+    [...dots.children].forEach((d,i)=>d.classList.toggle('on',i===cur));
+    animateBars();
+  }
+  function go(i){cur=Math.max(0,Math.min(slides-1,i));
+    render();
+    window.setTimeout(()=>{try{mermaid.run({nodes:document.querySelectorAll('.slide .mermaid')})}catch(e){}},300);
+  }
+  function nav(d){go(cur+d);}
+  function animateBars(){document.querySelectorAll('.bar').forEach(b=>b.style.width='100%');}
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();nav(1)}if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();nav(-1)}});
+  render();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad:false, theme:'dark',
+    themeVariables:{primaryColor:'#1b2450',primaryBorderColor:'#6d5cff',primaryTextColor:'#eef2ff',
+      lineColor:'#00d4ff',secondaryColor:'#0e1530',tertiaryColor:'#16214a',fontSize:'14px',edgeLabelBackground:'#0e1530'}
+  });
+  window.setTimeout(()=>{try{mermaid.run({nodes:document.querySelectorAll('.slide .mermaid')})}catch(e){}},400);
+</script>
+</body>
+</html>

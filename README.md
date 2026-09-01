@@ -53,6 +53,11 @@ python -m uvicorn main:app --host 127.0.0.1 --port 8001
 
 Verify: `curl http://127.0.0.1:8001/api/health`
 
+> **Optional — human-like voice (recommended):** the AI speaks with a *local neural* TTS
+> (Piper) so it sounds human instead of robotic. Run `bash scripts/setup_piper.sh` once
+> (creates `piper-venv/` + downloads the Amy voice). Without it, the backend falls back
+> to the macOS `say` voice. No API key needed either way.
+
 ### 2. Frontend (the classroom UI)
 
 ```bash
@@ -80,7 +85,7 @@ MISTRAL_API_KEY=        # https://console.mistral.ai
 GEMINI_API_KEY=         # https://aistudio.google.com/apikey (optional)
 ```
 
-Priority: Gemini → Mistral → Groq. Auto-fallback on errors.
+Priority: Gemini → Mistral → Groq → **local Ollama** (fully offline, final fallback). Auto-fallback on errors.
 
 ---
 
@@ -111,6 +116,7 @@ Priority: Gemini → Mistral → Groq. Auto-fallback on errors.
 | `POST` | `/api/rooms/{id}/end` | End session + generate insights |
 | `GET` | `/api/rooms/{id}/insights` | Get post-class insights |
 | `GET` | `/api/rooms/{id}/state` | Debug: current classroom state |
+| `GET` | `/api/tts?text=...&lang=en-IN` | Human-like speech audio (WAV) |
 
 ---
 
@@ -156,6 +162,7 @@ sahayak-live/
     ├── state.py                   # ClassroomState schema
     ├── room.py                    # Room registry + participants
     ├── llm_client.py              # Groq/Mistral/Gemini router + fallback
+    ├── tts.py                     # human-like TTS (Piper) + text humanizer
     ├── requirements.txt
     ├── .env.example
     └── agents/
@@ -177,8 +184,9 @@ sahayak-live/
 | Frontend | Next.js 15, TypeScript, Tailwind, Framer Motion, ShadCN UI |
 | Backend | Python, FastAPI, uvicorn, WebSockets |
 | Orchestration | LangGraph StateGraph |
-| LLM | Groq (GPT-OSS-120B), Mistral (mistral-small-latest), Gemini (optional) |
-| Speech | Web Speech API (SpeechRecognition + SpeechSynthesis) |
+| LLM | Groq (GPT-OSS-120B), Mistral (mistral-small-latest), Gemini (optional), Ollama (local/offline) |
+| Speech → text | Web Speech API (SpeechRecognition) |
+| Voice (TTS) | **Piper local neural TTS** (human voice) + macOS `say` fallback |
 
 ---
 
@@ -206,6 +214,12 @@ The combination of **live voice + floor management + private whispering + confus
 - **Moats:** voice-first physical presence, a proprietary dataset of Indian classroom interactions, hardware lock-in, and Hindi/Tamil/Telugu/Marathi/Bengali voice coverage no competitor serves.
 
 Full research + pricing + go-to-market: **[docs/business-model.md](docs/business-model.md)**
+
+## 📊 Pitch Materials
+
+- **Slide deck (7 slides):** `docs/pitch-deck.html` — open in any browser, navigate with arrow keys / Prev-Next. Includes problem, solution, market, USP, technical architecture (Mermaid diagram + tech stack), business model and ask.
+- **Pitch script:** `docs/pitch-script.md` — 60-second elevator pitch, slide-by-slide script, judge Q&A.
+- **Business model:** `docs/business-model.md` — market research, pricing, GTM, moats.
 
 ## 📄 License
 

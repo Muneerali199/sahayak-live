@@ -47,3 +47,8 @@ firestore-debug.log
 # python
 __pycache__/
 *.pyc
+
+# local neural TTS voice environment (recreate via scripts/setup_piper.sh)
+/piper-venv/
+backend/classroom/*.log
+
