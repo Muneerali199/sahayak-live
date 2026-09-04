@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useAgora } from "@/hooks/use-agora";
 import { speak, stopSpeaking } from "@/lib/tts";
 import { useToast } from "@/hooks/use-toast";
 
@@ -94,6 +95,7 @@ export default function ClassroomRoom() {
   const [insights, setInsights] = useState<any>(null);
   const [quizActive, setQuizActive] = useState(false);
   const [quizTarget, setQuizTarget] = useState("");
+  const [liveAudio, setLiveAudio] = useState(false);
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -174,6 +176,18 @@ export default function ClassroomRoom() {
 
   const { status, send } = useWebSocket(wsUrl, handleMessage);
 
+  // ─── Live classroom audio (Agora RTC) ───────────────────
+  const {
+    status: agoraStatus,
+    peers: agoraPeers,
+    error: agoraError,
+  } = useAgora({
+    channel: `sahayak-${roomId}`,
+    uid: userId,
+    role,
+    enabled: liveAudio,
+  });
+
   // Join once connected
   useEffect(() => {
     if (status === "connected" && !joinedRef.current) {
@@ -251,8 +265,22 @@ export default function ClassroomRoom() {
             )}
           </motion.div>
 
-          {/* Connection + mic status */}
+          {/* Connection + live audio */}
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={liveAudio ? "default" : "ghost"}
+              onClick={() => setLiveAudio(!liveAudio)}
+              className={liveAudio ? "bg-emerald-600 text-white" : "text-white/70 hover:bg-white/10"}
+              title="Join/leave the live classroom audio channel"
+            >
+              <Radio className={`w-4 h-4 mr-1 ${agoraStatus === "joined" ? "animate-pulse" : ""}`} />
+              {agoraStatus === "joined"
+                ? `Live · ${agoraPeers.length + 1} in audio`
+                : agoraStatus === "joining"
+                ? "Joining audio..."
+                : "Live Audio"}
+            </Button>
             <div className={`w-2 h-2 rounded-full ${status === "connected" ? "bg-green-400" : "bg-red-400"}`} />
             <span className="text-xs text-white/50">
               {status === "connected" ? "Connected" : "Connecting..."}
@@ -434,6 +462,9 @@ export default function ClassroomRoom() {
             </div>
             {speechError && (
               <p className="text-xs text-red-400 mt-1 text-center">{speechError}</p>
+            )}
+            {agoraError && (
+              <p className="text-xs text-amber-400 mt-1 text-center">Live audio: {agoraError}</p>
             )}
           </div>
         </div>

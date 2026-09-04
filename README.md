@@ -58,6 +58,14 @@ Verify: `curl http://127.0.0.1:8001/api/health`
 > (creates `piper-venv/` + downloads the Amy voice). Without it, the backend falls back
 > to the macOS `say` voice. No API key needed either way.
 
+> **Optional — live classroom audio (Agora RTC):** teacher + students share one live
+> audio channel so the whole class hears the same mic (and the AI voice plays through
+> the room speaker). One-time setup:
+> `pip install --break-system-packages --user agora-token-builder`, then
+> `agora login` → `agora project create sahayak-live --feature rtc` →
+> `agora project env write` and paste `AGORA_APP_ID` / `AGORA_APP_CERTIFICATE` into
+> `backend/classroom/.env`. Frontend just clicks the **Live Audio** toggle.
+
 ### 2. Frontend (the classroom UI)
 
 ```bash
@@ -72,6 +80,7 @@ npm run dev    # http://localhost:9002
 3. Allow microphone access
 4. Start teaching — the AI listens and helps at the right moments
 5. Open another browser tab as a student: `http://localhost:9002/classroom/<room-code>?role=student&name=Rahul`
+6. Click **Live Audio** in the header to share the classroom audio channel with everyone
 
 ---
 
@@ -117,6 +126,7 @@ Priority: Gemini → Mistral → Groq → **local Ollama** (fully offline, final
 | `GET` | `/api/rooms/{id}/insights` | Get post-class insights |
 | `GET` | `/api/rooms/{id}/state` | Debug: current classroom state |
 | `GET` | `/api/tts?text=...&lang=en-IN` | Human-like speech audio (WAV) |
+| `POST` | `/api/agora/token` | Mint an Agora RTC token for the live audio channel |
 
 ---
 
@@ -132,7 +142,9 @@ Next.js 15 Frontend                    Python FastAPI + LangGraph Backend
 │   - Agent swarm      │               │                              │
 │   - Teacher controls │               │  Ingest → Context →          │
 │   - Whisper toasts   │               │  CodeSwitch → GapRadar →     │
-│ /classroom/[id]/sum  │─── REST ─────│  Differentiation →           │
+│   - Live audio (mic) │── Agora RTC ──│  Differentiation →           │
+│     → shared channel │               │  FloorManager → Router →     │
+│ /classroom/[id]/sum  │─── REST ─────│  Action                      │
 │   (post-class)       │               │  FloorManager → Router →     │
 └──────────────────────┘               │  Action                      │
                                        │                              │
@@ -153,6 +165,7 @@ sahayak-live/
 │   │   └── dashboard/             # existing prep tools + Go Live CTA
 │   ├── hooks/
 │   │   ├── use-websocket.ts       # NEW: WebSocket hook
+│   │   ├── use-agora.ts           # NEW: live classroom audio (Agora RTC)
 │   │   └── use-speech-recognition.ts # NEW: Web Speech API hook
 │   └── lib/
 │       └── tts.ts                 # NEW: text-to-speech manager
@@ -182,11 +195,12 @@ sahayak-live/
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 15, TypeScript, Tailwind, Framer Motion, ShadCN UI |
-| Backend | Python, FastAPI, uvicorn, WebSockets |
+| Backend | Python, FastAPI, uvicorn, WebSockets + server-minted Agora tokens |
 | Orchestration | LangGraph StateGraph |
 | LLM | Groq (GPT-OSS-120B), Mistral (mistral-small-latest), Gemini (optional), Ollama (local/offline) |
 | Speech → text | Web Speech API (SpeechRecognition) |
 | Voice (TTS) | **Piper local neural TTS** (human voice) + macOS `say` fallback |
+| Live audio | Agora RTC (`agora-rtc-sdk-ng`, `agora-token-builder`) |
 
 ---
 

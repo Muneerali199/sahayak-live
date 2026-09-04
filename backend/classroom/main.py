@@ -101,6 +101,44 @@ async def synthesize_speech(text: str, lang: str = "en-IN"):
         return {"error": f"TTS failed: {e}"}, 500
 
 
+# ─── Agora RTC token (live classroom audio) ───────────────────────
+
+AGORA_APP_ID = os.getenv("AGORA_APP_ID", "")
+AGORA_APP_CERTIFICATE = os.getenv("AGORA_APP_CERTIFICATE", "")
+AGORA_TOKEN_TTL = 3600  # seconds
+
+
+class TokenRequest(BaseModel):
+    channel: str
+    uid: int = 0
+    role: str = "publisher"
+
+
+@app.post("/api/agora/token")
+async def agora_token(req: TokenRequest):
+    """Mint an Agora RTC token so clients can join the classroom audio channel."""
+    if not AGORA_APP_ID or not AGORA_APP_CERTIFICATE:
+        return {"error": "Agora not configured. Set AGORA_APP_ID and AGORA_APP_CERTIFICATE in .env"}, 500
+
+    from agora_token_builder import RtcTokenBuilder
+    import time
+
+    # Role_Publisher = 1, Role_Subscriber = 2
+    role = 1 if req.role == "publisher" else 2
+    expire_ts = int(time.time()) + AGORA_TOKEN_TTL
+    token = RtcTokenBuilder.buildTokenWithUid(
+        AGORA_APP_ID, AGORA_APP_CERTIFICATE, req.channel, req.uid, role, expire_ts
+    )
+    return {
+        "app_id": AGORA_APP_ID,
+        "channel": req.channel,
+        "uid": req.uid,
+        "role": req.role,
+        "token": token,
+        "expires_in": AGORA_TOKEN_TTL,
+    }
+
+
 # ─── REST Endpoints ────────────────────────────────────────────────
 
 @app.get("/api/health")
@@ -111,6 +149,7 @@ async def health():
         "groq_configured": bool(GROQ_API_KEY),
         "mistral_configured": bool(MISTRAL_API_KEY),
         "local_ollama": ollama_healthy(),
+        "agora_configured": bool(AGORA_APP_ID and AGORA_APP_CERTIFICATE),
         "active_rooms": len(registry.rooms),
     }
 
