@@ -125,7 +125,7 @@ export default function ClassroomRoom() {
       case "AI_SPEAK":
         const content = msg.content as string;
         setAiCaption(content);
-        speak(content);
+        if (!msg.via_channel) speak(content);
         setTimeout(() => setAiCaption(""), 5000);
         break;
       case "WHISPER":
@@ -158,12 +158,12 @@ export default function ClassroomRoom() {
         setQuizActive(true);
         setQuizTarget(msg.target_student_id as string);
         setAiCaption(`Quiz for ${msg.target_name}: ${msg.content}`);
-        speak(msg.content as string);
+        if (!msg.via_channel) speak(msg.content as string);
         break;
       case "QUIZ_RESULT":
         setQuizActive(false);
         setAiCaption(msg.content as string);
-        speak(msg.content as string);
+        if (!msg.via_channel) speak(msg.content as string);
         setTimeout(() => setAiCaption(""), 5000);
         break;
       case "SESSION_ENDED":
@@ -187,6 +187,14 @@ export default function ClassroomRoom() {
     role,
     enabled: liveAudio,
   });
+
+  // Tell the backend whether this participant is in the live audio channel so
+  // it knows when to broadcast Sahayak's voice into it.
+  useEffect(() => {
+    if (status !== "connected") return;
+    send({ type: "LIVE_AUDIO", enabled: agoraStatus === "joined" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agoraStatus, status]);
 
   // Join once connected
   useEffect(() => {
@@ -452,11 +460,16 @@ export default function ClassroomRoom() {
               <Input
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                placeholder={isListening ? "Listening... (or type here)" : "Type a message..."}
+                placeholder={isListening ? "Listening... type to send a message" : "Type a message for Sahayak (AI) or the teacher... press Enter"}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
                 onKeyDown={(e) => e.key === "Enter" && sendText()}
               />
-              <Button onClick={sendText} size="icon" className="shrink-0 bg-white/10 hover:bg-white/20 text-white">
+              <Button
+                onClick={sendText}
+                size="icon"
+                className="shrink-0 bg-white/10 hover:bg-white/20 text-white"
+                title="Send message"
+              >
                 <Send className="w-4 h-4" />
               </Button>
             </div>

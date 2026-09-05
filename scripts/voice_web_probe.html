@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Agora voice web probe</title>
+  <style>
+    body { font: 12px/1.4 ui-monospace, monospace; padding: 12px; }
+    button { font: inherit; margin: 4px 4px 4px 0; padding: 6px 10px; cursor: pointer; }
+    #log { background: #0f172a; color: #e2e8f0; padding: 8px; height: 70vh; overflow: auto; white-space: pre-wrap; }
+    .muted { color: #f87171; }
+    .pub { color: #4ade80; }
+    .name { color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div>
+    <button id="join-rtc">Join RTC (mode rtc)</button>
+    <button id="join-live">Join LIVE (audience)</button>
+    <button id="leave">Leave both</button>
+    <span id="meta"></span>
+  </div>
+  <pre id="log">(no events yet)\n</pre>
+
+  <script src="/node_modules/agora-rtc-sdk-ng/AgoraRTC_N-production.full.js"></script>
+  <script>
+    const Q = new URLSearchParams(location.search);
+    const CHANNEL = Q.get("channel") || "probe-web-1";
+    const BACKEND = "http://127.0.0.1:8001";
+
+    const logEl = document.getElementById("log");
+    function log(msg, cls) {
+      const line = `${new Date().toISOString().slice(11, 23)} ${msg}${cls ? "" : ""}`;
+      const span = document.createElement("div");
+      if (cls) span.className = cls;
+      span.textContent = line;
+      logEl.appendChild(span);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log("[probe]", line);
+    }
+    document.getElementById("meta").textContent = ` channel=${CHANNEL}`;
+
+    const clients = {};
+
+    async function token(uid) {
+      const res = await fetch(`${BACKEND}/api/agora/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: CHANNEL, uid, role: "publisher" }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.token) throw new Error(data.error || "no token");
+      return { appId: data.app_id, token: data.token };
+    }
+
+    window.AgoraRTC.setLogLevel(2);
+
+    async function makeClient(tag, mode, uid, role) {
+      const c = window.AgoraRTC.createClient({ mode, codec: "vp8" });
+      clients[tag] = c;
+
+      c.on("user-joined", (u) => log(`[${tag}] user-joined uid=${u.uid}`));
+      c.on("user-left", (u) => log(`[${tag}] user-left uid=${u.uid}`));
+      c.on("user-info-update", (u, kind) => {
+        log(`[${tag}] user-info-update uid=${u.uid} ${kind}`, kind.includes("mute") ? "muted" : "");
+      });
+      c.on("user-published", async (u, mt) => {
+        log(`[${tag}] user-published uid=${u.uid} media=${mt}`, "pub");
+        try {
+          await c.subscribe(u, mt);
+          if (mt === "audio") {
+            log(`[${tag}] subscribed audio uid=${u.uid}; playing now`, "pub");
+            u.audioTrack.play();
+          } else {
+            log(`[${tag}] subscribed ${mt} uid=${u.uid}`);
+          }
+        } catch (e) {
+          log(`[${tag}] subscribe FAILED uid=${u.uid} ${e}`);
+        }
+      });
+      c.on("user-unpublished", (u, mt) => {
+        log(`[${tag}] user-unpublished uid=${u.uid} media=${mt}`);
+        if (mt === "audio") {
+          try { u.audioTrack && u.audioTrack.stop(); } catch {}
+        }
+      });
+
+      const { appId, token: t } = await token(uid);
+      if (mode === "live") {
+        await c.setClientRole(role);
+      }
+      await c.join(appId, CHANNEL, t, uid);
+      log(`[${tag}] JOINED ${CHANNEL} uid=${uid} mode=${mode}`);
+      return c;
+    }
+
+    setInterval(() => {
+      for (const [tag, c] of Object.entries(clients)) {
+        const remotes = (c.remoteUsers || []).map((u) => ({
+          uid: u.uid,
+          hasAudio: u.hasAudio,
+          playing: !!(u.audioTrack && u.audioTrack.isPlaying),
+          paused: !!(u.audioTrack && u.audioTrack.isPaused),
+        }));
+        log(`[${tag}] dump conn=${c.connectionState} remotes=${JSON.stringify(remotes)}`);
+      }
+    }, 3000);
+
+    document.getElementById("join-rtc").onclick = async () => {
+      try { await makeClient("rtc", "rtc", 900011); }
+      catch (e) { log(`[rtc] JOIN ERROR ${e}`); }
+    };
+    document.getElementById("join-live").onclick = async () => {
+      try { await makeClient("live", "live", 900012, "audience"); }
+      catch (e) { log(`[live] JOIN ERROR ${e}`); }
+    };
+    document.getElementById("leave").onclick = () => {
+      for (const [tag, c] of Object.entries(clients)) { try { c.leave(); } catch {} }
+      log("left all");
+    };
+
+    // auto-join rtc probe so playwright needs no clicks
+    if (!Q.get("manual")) {
+      document.getElementById("join-rtc").click();
+    }
+  </script>
+</body>
+</html>

@@ -15,6 +15,9 @@ VENV_DIR="$PROJECT_DIR/piper-venv"
 VOICE_DIR="$VENV_DIR/voices"
 MODEL="en_US-amy-medium.onnx"
 
+# Indian-language Piper voices (offline). edge-tts covers the rest online.
+INDIAN_VOICES="hi_IN-pratham-medium te_IN-maya-medium ml_IN-meera-medium mr_IN-google-medium"
+
 # Pick a python3.11 binary
 PYTHON="${PYTHON:-}"
 if [ -z "$PYTHON" ]; then
@@ -35,8 +38,11 @@ if [ ! -x "$VENV_DIR/bin/piper" ]; then
   "$PYTHON" -m venv "$VENV_DIR"
   "$VENV_DIR/bin/pip" install --upgrade pip
   "$VENV_DIR/bin/pip" install "piper-tts==1.3.0"
+  # Microsoft edge-tts = online voices for Indian languages not in Piper
+  "$VENV_DIR/bin/pip" install "edge-tts>=7.0.0"
 else
   echo "venv already present at $VENV_DIR"
+  "$VENV_DIR/bin/pip" install -q "edge-tts>=7.0.0" || true
 fi
 
 if [ ! -f "$VOICE_DIR/$MODEL" ]; then
@@ -48,6 +54,18 @@ if [ ! -f "$VOICE_DIR/$MODEL" ]; then
 else
   echo "Voice model already present"
 fi
+
+for MODEL in $INDIAN_VOICES; do
+  if [ ! -s "$VOICE_DIR/$MODEL.onnx" ]; then
+    lang_dir=$(case "$MODEL" in hi_IN*) echo "hi/hi_IN";; te_IN*) echo "te/te_IN";; ml_IN*) echo "ml/ml_IN";; mr_IN*) echo "mr/mr_IN";; esac)
+    QUALITY=medium
+    echo "Downloading Indian voice $MODEL (~64MB) ..."
+    curl -sL -o "$VOICE_DIR/$MODEL.onnx" \
+      "https://huggingface.co/rhasspy/piper-voices/resolve/main/$lang_dir/$QUALITY/$MODEL.onnx" &&
+    curl -sL -o "$VOICE_DIR/$MODEL.onnx.json" \
+      "https://huggingface.co/rhasspy/piper-voices/resolve/main/$lang_dir/$QUALITY/$MODEL.onnx.json"
+  fi
+done
 
 echo
 echo "Piper TTS is ready!"

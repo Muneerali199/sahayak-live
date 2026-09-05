@@ -11,6 +11,7 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from state import ClassroomState
+from tts import detect_language as detect_lang
 from agents.floor_manager import run_floor_manager, update_floor_state
 from agents.lesson_context import run_lesson_context
 from agents.code_switch import run_code_switch
@@ -47,6 +48,9 @@ async def ingest_node(state: dict) -> dict:
     state["floor_state"] = new_floor
     state["current_speaker_id"] = utterance.get("speaker_id", "")
     state["current_speaker_role"] = utterance.get("role", "")
+
+    # Auto-match the student's language so every agent + voice replies in it
+    state["language"] = detect_lang(utterance.get("text", ""))
 
     # Register student profile if new
     if utterance.get("role") == "student":
@@ -98,7 +102,7 @@ async def router_node(state: dict) -> dict:
     last = state.get("last_utterance", {})
     last_text = last.get("text", "").lower().strip()
     last_role = last.get("role", "")
-    direct_query = (not ai_muted and last_role == "student" and _is_direct_query(last_text))
+    direct_query = (not ai_muted and last_role in ("student", "teacher") and _is_direct_query(last_text))
 
     if not (state.get("ai_permitted", False) or direct_query):
         state["pending_action"] = None

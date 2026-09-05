@@ -26,7 +26,8 @@ from pydantic import BaseModel
 from room import registry, Room, Participant
 from orchestrator import process_utterance, generate_insights
 from llm_client import GROQ_API_KEY, MISTRAL_API_KEY, ollama_healthy
-from tts import synthesize as tts_synthesize, _piper_available as piper_available
+from tts import synthesize as tts_synthesize, _piper_available as piper_available, detect_language as detect_lang
+import agora_voice
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -44,6 +45,43 @@ app.add_middleware(
 # ─── In-memory room states ─────────────────────────────────────────
 
 room_states: dict[str, dict] = {}
+
+# Number of participants per room currently in the live audio channel.
+# When > 0, Sahayak's voice is broadcast into the channel instead of (only)
+# playing on the teacher's device.
+AUDIO_LIVE: dict[str, int] = {}
+
+
+def live_audio_active(room_id: str) -> bool:
+    return AUDIO_LIVE.get(room_id, 0) > 0
+
+
+def add_live_audio(room_id: str):
+    AUDIO_LIVE[room_id] = AUDIO_LIVE.get(room_id, 0) + 1
+
+
+def drop_live_audio(room_id: str):
+    if room_id in AUDIO_LIVE:
+        AUDIO_LIVE[room_id] = max(0, AUDIO_LIVE[room_id] - 1)
+        if AUDIO_LIVE[room_id] == 0:
+            AUDIO_LIVE.pop(room_id, None)
+
+
+def maybe_voice_broadcast(room_id: str, text: str, lang: str = "en") -> bool:
+    """Push the AI's reply into the room's live audio channel if anyone is listening."""
+    if not live_audio_active(room_id) or not text:
+        return False
+    channel = f"sahayak-{room_id.replace(' ', '-').lower()}"
+    return agora_voice.broadcast_speech(channel, text, lang)
+
+
+def _utterance_lang(state: dict) -> str:
+    """Detect the language of the student's most recent message (drives voice choice)."""
+    return detect_lang(state.get("last_utterance", {}).get("text", ""))
+
+
+def agora_channel_for(room_id: str) -> str:
+    return f"sahayak-{room_id.replace(' ', '-').lower()}"
 
 
 def get_room_state(room_id: str) -> dict:
@@ -75,19 +113,19 @@ def get_room_state(room_id: str) -> dict:
     return room_states[room_id]
 
 
-# ─── Local TTS (neural Piper, falls back to macOS `say`) ──────────
+# ─── Local TTS (neural Piper + edge-tts, 10+ Indian languages) ─────
 
 TTS_VOICE = os.getenv("TTS_VOICE", "Rishi")  # fallback macOS voice
 
 
 @app.get("/api/tts")
 async def synthesize_speech(text: str, lang: str = "en-IN"):
-    """Generate human-like speech audio via local neural TTS. Returns a WAV file."""
+    """Generate speech audio (auto-detects language from text unless `lang` given). Returns WAV."""
     if not text:
         return {"error": "No text provided"}, 400
 
     try:
-        audio, media_type = tts_synthesize(text)
+        audio, media_type = tts_synthesize(text, lang)
         return Response(
             content=audio,
             media_type=media_type,
@@ -99,6 +137,11 @@ async def synthesize_speech(text: str, lang: str = "en-IN"):
     except Exception as e:
         logger.error("TTS error: %s", e)
         return {"error": f"TTS failed: {e}"}, 500
+
+
+@app.on_event("shutdown")
+async def _shutdown():
+    agora_voice.shutdown()
 
 
 # ─── Agora RTC token (live classroom audio) ───────────────────────
@@ -150,6 +193,7 @@ async def health():
         "mistral_configured": bool(MISTRAL_API_KEY),
         "local_ollama": ollama_healthy(),
         "agora_configured": bool(AGORA_APP_ID and AGORA_APP_CERTIFICATE),
+        "ai_voice_bridge": agora_voice.available(),
         "active_rooms": len(registry.rooms),
     }
 
@@ -330,25 +374,31 @@ async def classroom_websocket(websocket: WebSocket, room_id: str):
                                 "concept": action.get("concept", ""),
                             })
                         elif action_type == "EXPLAIN":
+                            broadcast = maybe_voice_broadcast(room_id, content, _utterance_lang(state))
                             await room.broadcast({
                                 "type": "AI_SPEAK",
                                 "content": content,
                                 "concept": action.get("concept", ""),
+                                "via_channel": broadcast,
                             })
                         elif action_type == "QUIZ_ASK":
                             target = action.get("target_student_id", "")
+                            broadcast = maybe_voice_broadcast(room_id, content, _utterance_lang(state))
                             await room.broadcast({
                                 "type": "QUIZ_ASK",
                                 "content": content,
                                 "target_student_id": target,
                                 "target_name": state.get("student_profiles", {}).get(target, {}).get("name", "student"),
+                                "via_channel": broadcast,
                             })
                         elif action_type == "QUIZ_EVALUATE":
+                            broadcast = maybe_voice_broadcast(room_id, content, _utterance_lang(state))
                             await room.broadcast({
                                 "type": "QUIZ_RESULT",
                                 "content": content,
                                 "score": action.get("score", 50),
                                 "correct": action.get("correct", ""),
+                                "via_channel": broadcast,
                             })
 
                         # Reset floor after AI speaks
@@ -400,6 +450,20 @@ async def classroom_websocket(websocket: WebSocket, room_id: str):
                         "enabled": state["approve_mode"],
                     })
 
+            # ─── LIVE AUDIO (Agora channel presence) ──────────
+            elif msg_type == "LIVE_AUDIO":
+                if not participant:
+                    continue
+                enabled = bool(msg.get("enabled", False))
+                if enabled and not getattr(participant, "audio_live", False):
+                    participant.audio_live = True
+                    add_live_audio(room_id)
+                elif not enabled and getattr(participant, "audio_live", False):
+                    participant.audio_live = False
+                    drop_live_audio(room_id)
+                logger.info("live audio %s in room %s (count=%d)",
+                            "ON" if enabled else "OFF", room_id, AUDIO_LIVE.get(room_id, 0))
+
             # ─── QUIZ ANSWER ────────────────────────────────────
             elif msg_type == "QUIZ_ANSWER":
                 if not participant:
@@ -424,11 +488,13 @@ async def classroom_websocket(websocket: WebSocket, room_id: str):
                         state = await process_utterance(state)
                         action = state.get("pending_action")
                         if action and action.get("type") == "QUIZ_EVALUATE":
+                            broadcast = maybe_voice_broadcast(room_id, action.get("content", ""), _utterance_lang(state))
                             await room.broadcast({
                                 "type": "QUIZ_RESULT",
                                 "content": action.get("content", ""),
                                 "score": action.get("score", 50),
                                 "correct": action.get("correct", ""),
+                                "via_channel": broadcast,
                             })
                             state["floor_state"] = "OPEN_FLOOR"
                             state["pending_action"] = None
@@ -439,6 +505,8 @@ async def classroom_websocket(websocket: WebSocket, room_id: str):
 
     except WebSocketDisconnect:
         if participant:
+            if getattr(participant, "audio_live", False):
+                drop_live_audio(room_id)
             room.participants.pop(participant.user_id, None)
             await room.broadcast({
                 "type": "PARTICIPANT_LEFT",

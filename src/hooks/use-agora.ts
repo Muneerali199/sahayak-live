@@ -9,6 +9,12 @@ import type { IAgoraRTCClient, ILocalAudioTrack } from "agora-rtc-sdk-ng";
 
 const BACKEND = "http://127.0.0.1:8001";
 
+// The backend's AI voice uid. Remote audio from this uid is played softly in
+// the browser to avoid ear-blasting; classroom echo-cancellation (AEC) is set
+// on the local mic track so the AI voice doesn't loop back into the channel.
+const AI_UID = Number(process.env.NEXT_PUBLIC_AGORA_AI_UID) || 1396787265;
+const AI_TRACK_VOLUME = Number(process.env.NEXT_PUBLIC_AGORA_AI_VOLUME) || 55; // 0-100
+
 type AgoraStatus = "idle" | "joining" | "joined" | "error";
 
 interface UseAgoraOptions {
@@ -89,6 +95,8 @@ export function useAgora({ channel, uid, role, enabled }: UseAgoraOptions) {
         if (mediaType !== "audio") return;
         await client.subscribe(user, mediaType);
         user.audioTrack?.play();
+        // Play the AI softly — never blasting.
+        if (Number(user.uid) === AI_UID) user.audioTrack?.setVolume(AI_TRACK_VOLUME);
       });
       client.on("user-unpublished", (user, mediaType) => {
         if (mediaType === "audio") user.audioTrack?.stop();
@@ -97,9 +105,32 @@ export function useAgora({ channel, uid, role, enabled }: UseAgoraOptions) {
       await client.join(data.app_id, safeChannel, data.token, numericUid);
 
       if (isTeacher) {
-        const track = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: "speech_standard" });
-        await client.publish([track]);
-        micTrackRef.current = track;
+        try {
+          const track = await Promise.race([
+            AgoraRTC.createMicrophoneAudioTrack({
+            encoderConfig: "speech_standard",
+            AEC: true, // echo cancellation kills the speaker->mic feedback loop
+            ANS: true, // noise suppression
+            AGC: true, // automatic gain control
+          }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Microphone timed out")), 8000)
+            ),
+          ]);
+          const published = await client.publish([track]).then(
+            () => true,
+            () => false
+          );
+          if (published) {
+            micTrackRef.current = track;
+          } else {
+            track.close();
+          }
+        } catch (e) {
+          // Mic unavailable or permission denied — still join as a
+          // listener so the teacher hears the AI voice and live students.
+          console.warn("[agora] teacher mic unavailable, joined as listener:", e);
+        }
       }
 
       setStatus("joined");
